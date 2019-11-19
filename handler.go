@@ -22,6 +22,10 @@ func (s server) SetRoutes() {
 	s.Router.DELETE("/invoice", nilFunc)
 	s.Router.GET("/invoices", nilFunc)
 
+	s.Router.GET("/tags", nilFunc)
+
+	s.Router.GET("/priceview", s.GetPriceView())
+
 	s.Router.GET("/health", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { w.Write([]byte("ok")) })
 
 }
@@ -83,6 +87,33 @@ func (s server) CreateInvoice() httprouter.Handle {
 		}
 
 		api.Write(w, nil)
+
+	}
+}
+
+func (s server) GetPriceView() httprouter.Handle {
+
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+		var reqTags []string
+		err := json.NewDecoder(r.Body).Decode(&reqTags)
+		if err != nil {
+			api.WriteErr(w, http.StatusBadRequest, err, "failed decoding")
+			return
+		}
+
+		defer r.Body.Close()
+
+		priceViews, err := s.Storage.GetPriceView(reqTags, "", "")
+		if err != nil {
+			log.Println(err)
+			api.WriteErr(w, http.StatusInternalServerError, err, "failed storing")
+			return
+		}
+
+		api.Write(w, struct {
+			PriceViews []PriceView `json:"items"`
+		}{PriceViews: priceViews})
 
 	}
 }

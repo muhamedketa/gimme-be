@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -23,6 +24,8 @@ func main() {
 	}
 
 	srv.SetRoutes()
+
+	fmt.Println("server started")
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
