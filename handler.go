@@ -16,6 +16,7 @@ func nilFunc(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func (s server) SetRoutes() {
 
 	s.Router.POST("/item", s.CreateItem())
+	s.Router.GET("/item", s.GetAllItems())
 	s.Router.DELETE("/item/:item", nilFunc)
 
 	s.Router.POST("/invoice", s.CreateInvoice())
@@ -95,8 +96,12 @@ func (s server) GetPriceView() httprouter.Handle {
 
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
+		enableCors(&w)
+
+		r.ParseForm()
+
 		var reqTags []string
-		err := json.NewDecoder(r.Body).Decode(&reqTags)
+		err := json.Unmarshal([]byte(r.FormValue("tags")), &reqTags)
 		if err != nil {
 			api.WriteErr(w, http.StatusBadRequest, err, "failed decoding")
 			return
@@ -104,7 +109,7 @@ func (s server) GetPriceView() httprouter.Handle {
 
 		defer r.Body.Close()
 
-		priceViews, err := s.Storage.GetPriceView(reqTags, "", "")
+		priceViews, err := s.Storage.GetPriceView(reqTags, "2019-01-01", "2020-01-01")
 		if err != nil {
 			log.Println(err)
 			api.WriteErr(w, http.StatusInternalServerError, err, "failed storing")
@@ -114,6 +119,30 @@ func (s server) GetPriceView() httprouter.Handle {
 		api.Write(w, struct {
 			PriceViews []PriceView `json:"items"`
 		}{PriceViews: priceViews})
+
+	}
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
+func (s server) GetAllItems() httprouter.Handle {
+
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+		enableCors(&w)
+
+		items, err := s.Storage.GetAllItems()
+		if err != nil {
+			log.Println(err)
+			api.WriteErr(w, http.StatusInternalServerError, err, "failed storing")
+			return
+		}
+
+		api.Write(w, struct {
+			Items []Item `json:"items"`
+		}{Items: items})
 
 	}
 }

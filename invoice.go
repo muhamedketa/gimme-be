@@ -9,7 +9,7 @@ type Invoice struct {
 	Price    float64 `json:"price,omitempty"`
 }
 
-func (x Invoice) TotalPrice() float64 {
+func (x Invoice) totalPrice() float64 {
 	return x.Quantity * x.Price
 }
 
