@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 )
 
 func main() {
+
+	port := os.Getenv("PORT")
 
 	router := httprouter.New()
 
@@ -28,7 +31,7 @@ func main() {
 
 	fmt.Println("server started")
 
-	log.Fatal(http.ListenAndServe(":8080", cors.AllowAll().Handler(router)))
+	log.Fatal(http.ListenAndServe(":"+port, cors.AllowAll().Handler(router)))
 }
 
 type server struct {
