@@ -36,3 +36,6 @@
 [[constraint]]
   name = "github.com/rs/cors"
   version = "1.7.0"
+
+[metadata.heroku]
+  root-package = "github.com/muhamedketa/gimme-back"

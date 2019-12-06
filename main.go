@@ -5,9 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rs/cors"
-
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 )
 
 func main() {
