@@ -15,7 +15,7 @@ func main() {
 
 	storage, err := NewStorage()
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed getting db %v", err)
 	}
 	defer storage.Close()
 
