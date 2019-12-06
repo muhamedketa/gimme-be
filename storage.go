@@ -20,7 +20,7 @@ type Storage struct {
 
 func NewStorage() (StorageI, error) {
 
-	db, err := sqlx.Open("mysql", "user:password@tcp(localhost:6603)/db")
+	db, err := sqlx.Open("mysql", "o3l0lijfnmr47tkw:rusk8zr7gqfhlo79@q2gen47hi68k1yrb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com:3306/c7uc48qtojxnq2gu")
 	if err != nil {
 		return nil, err
 	}
