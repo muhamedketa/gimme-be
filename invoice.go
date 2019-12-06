@@ -1,24 +1,18 @@
 package main
 
-import "fmt"
-
 type Invoice struct {
-	ID       int     `json:"id,omitempty"`
-	ItemID   int     `json:"item_id,omitempty"`
+	ID       int    `json:"id,omitempty"`
+	ItemName string `json:"item_name,omitempty"`
+	Sales    []Sale `json:"sales,omitempty"`
+}
+
+// Sale gives the data on total sale on an item
+type Sale struct {
+	Date     string  `json:"date,omitempty"`
+	Total    float64 `json:"total,omitempty"`
 	Quantity float64 `json:"quantity,omitempty"`
-	Price    float64 `json:"price,omitempty"`
 }
 
-func (x Invoice) totalPrice() float64 {
-	return x.Quantity * x.Price
-}
-
-func (x Invoice) Validate() error {
-
-	if x.ItemID == 0 || x.Quantity == 0 {
-		return fmt.Errorf("missing data")
-	}
-
-	return nil
-
+func (x Sale) priceOne() float64 {
+	return x.Total / x.Quantity
 }

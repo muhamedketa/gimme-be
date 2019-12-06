@@ -8,13 +8,8 @@ import (
 )
 
 type StorageI interface {
-	CreateItem(x *Item) error
-
-	GetAllItems() ([]Item, error)
-
-	CreateInvoice(x *Invoice) error
-
-	GetPriceView(tags []string, start, end string) ([]PriceView, error)
+	GetInvoices(start, end string) ([]Invoice, error)
+	AddInvoiceSale(invoiceID int, sale Sale) error
 
 	Close() error
 }
@@ -25,7 +20,7 @@ type Storage struct {
 
 func NewStorage() (StorageI, error) {
 
-	db, err := sqlx.Open("mysql", "root:mypassword@tcp(localhost:6603)/primary_db")
+	db, err := sqlx.Open("mysql", "user:password@tcp(localhost:6603)/db")
 	if err != nil {
 		return nil, err
 	}
@@ -38,15 +33,17 @@ func NewStorage() (StorageI, error) {
 	return Storage{db}, err
 }
 
-// GetAllItems gets the items and merged tags from db; used semi-frequently
-func (s Storage) GetAllItems() ([]Item, error) {
+// GetInvoices gets the items and merged tags from db; used semi-frequently
+func (s Storage) GetInvoices(start, end string) ([]Invoice, error) {
 
-	var resp []Item
+	var resp []Invoice
 
-	rows, err := s.DB.Query(`SELECT items.id as id, items.name as name, json_arrayagg(it.tag) as tags
-	from items
-			 LEFT JOIN item_tag it on items.id = it.item_id
-	GROUP BY items.id`)
+	rows, err := s.DB.Query(`SELECT id                                                                              AS id,
+	item_name                                                                       AS item_name,
+	json_arrayagg(json_object('date', sale.date, 'total', IFNULL(sale.total, 0))) AS sales
+FROM invoices i
+	  LEFT JOIN invoice_sale sale on i.id = sale.invoice_id AND sale.date BETWEEN ? AND ?
+GROUP BY id`, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -56,20 +53,20 @@ func (s Storage) GetAllItems() ([]Item, error) {
 	for rows.Next() {
 
 		var (
-			addition   Item
-			mergedTags string
+			addition    Invoice
+			mergedSales string
 		)
 
 		err := rows.Scan(
 			&addition.ID,
-			&addition.Name,
-			&mergedTags,
+			&addition.ItemName,
+			&mergedSales,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		if err = json.Unmarshal([]byte(mergedTags), &addition.Tags); err != nil {
+		if err = json.Unmarshal([]byte(mergedSales), &addition.Sales); err != nil {
 			return nil, err
 		}
 
@@ -85,73 +82,12 @@ func (s Storage) GetAllItems() ([]Item, error) {
 
 }
 
-// PriceView is the type of data on graph to show how much was spent in a period of time
-type PriceView struct {
-	Sum            float64 `json:"sum,omitempty"`
-	Quantity       float64 `json:"quantity,omitempty"`
-	AvgPricePerOne float64 `json:"avg_price_per_one,omitempty"`
-	ItemID         int     `json:"item_id,omitempty"`
-}
+func (s Storage) AddInvoiceSale(invoiceID int, sale Sale) error {
 
-//TODO:  use itemID on graphs, make a separate get items which also returns tags per items
-// and only return itemID on views
-
-func (s Storage) GetPriceView(tags []string, start, end string) ([]PriceView, error) {
-
-	resp := []PriceView{}
-
-	stmt, args, err := sqlx.In(`SELECT SUM(price_total) AS sum,
-	COUNT(quantity)  AS quantity,
-	AVG(price_per_1) AS avg_price_per_1,
-	invoices.item_id
-FROM invoices
-	  INNER JOIN items i on invoices.item_id = i.id
-	  INNER JOIN item_tag it on i.id = it.item_id AND it.tag in (?)
-WHERE created_at BETWEEN ? AND ?
-GROUP BY item_id`, tags, start, end)
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := s.DB.Query(stmt, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-
-		var (
-			addition PriceView
-		)
-
-		err := rows.Scan(
-			&addition.Sum,
-			&addition.Quantity,
-			&addition.AvgPricePerOne,
-			&addition.ItemID,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		resp = append(resp, addition)
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-func (s Storage) CreateItem(x *Item) error {
-
-	_, err := s.DB.Exec(
-		"INSERT INTO items(name) values(?)",
-		x.Name,
+	_, err := s.DB.Exec(`INSERT INTO invoice_sale (invoice_id, total, date) VALUES (?, ?, ?)`,
+		invoiceID,
+		sale.Total,
+		sale.Date,
 	)
 
 	if err != nil {
@@ -160,33 +96,6 @@ func (s Storage) CreateItem(x *Item) error {
 
 	return nil
 
-}
-
-func (s Storage) CreateInvoice(x *Invoice) error {
-	_, err := s.DB.Exec(
-		`INSERT INTO invoices (
-			item_id, 
-			quantity, 
-			price_per_1, 
-			price_total, 
-			created_at
-		) values(
-			?,
-			?,
-			?,
-			?,
-			NOW() )`,
-		x.ItemID,
-		x.Quantity,
-		x.Price,
-		x.totalPrice(),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Close implements ioCloser

@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/rs/cors"
+
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -27,7 +29,7 @@ func main() {
 
 	fmt.Println("server started")
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":8080", cors.AllowAll().Handler(router)))
 }
 
 type server struct {
@@ -35,11 +37,3 @@ type server struct {
 	Router  *httprouter.Router
 	Port    string
 }
-
-/* filters:
-
-item (in array)
-time > <
-tag
-
-*/
