@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -32,6 +33,7 @@ func (s server) GetInvoicesHandler() httprouter.Handle {
 
 		invoices, err := s.Storage.GetInvoices(start, end)
 		if err != nil {
+			log.Println("handler", "GetInvoicesHandler", "error", err)
 			api.WriteErr(w, 500, err)
 			return
 		}

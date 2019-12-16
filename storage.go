@@ -37,12 +37,14 @@ func (s Storage) GetInvoices(start, end string) ([]Invoice, error) {
 
 	var resp []Invoice
 
-	rows, err := s.DB.Query(`SELECT id                                                                              AS id,
+	rows, err := s.DB.Query(`
+	SELECT id                                                                              AS id,
 	item_name                                                                       AS item_name,
-	json_arrayagg(json_object('date', sale.date, 'total', IFNULL(sale.total, 0))) AS sales
+	json_arrayagg(json_object('date', sale.date, 'total', IFNULL(sale.total, 0)))   AS      sales
 FROM invoices i
 	  LEFT JOIN invoice_sale sale on i.id = sale.invoice_id AND sale.date BETWEEN ? AND ?
-GROUP BY id`, start, end)
+GROUP BY id
+`, start, end)
 	if err != nil {
 		return nil, err
 	}
